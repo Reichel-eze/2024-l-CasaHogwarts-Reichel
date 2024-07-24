@@ -228,4 +228,28 @@ esBuenAlumno(Mago) :-
     esAlumno(Mago),
     hizoAlgunaAccion(Mago),
     not(hizoAlgoMalo(Mago)).
-    %forall(accion(Mago,Accion), accionBuena(Accion)).
+    %forall(accion(Mago,Accion), accionBuena(Accion)). ESTE NO
+
+% b) Saber si una acción es recurrente, que se cumple 
+% si más de un mago hizo esa misma acción.
+
+accionRecurrente(Accion) :-
+    hizo(Mago1,Accion),
+    hizo(Mago2,Accion),
+    Mago1 \= Mago2.
+
+% 2) Saber cuál es el puntaje total de una casa, 
+% que es la suma de los puntos obtenidos por sus miembros
+
+puntajeTotal(Casa, PuntajeTotal) :-
+    esDe(_,Casa),
+    findall(PuntajeMago, (esDe(Mago,Casa), puntajeMiembro(Mago,PuntajeMago)), ListaDePuntajes),
+    sum_list(ListaDePuntajes, PuntajeTotal).
+    
+puntajeMiembro(Mago, PuntajeMiembro) :-    % puntajeTotal de todas las acciones del mago
+    findall(PuntajeAccion, puntajeQueObtuvo(Mago, Accion, PuntajeAccion), ListaDePuntajesMago),
+    sum_list(ListaDePuntajesMago, PuntajeMiembro).
+
+puntajeQueObtuvo(Mago, Accion, Puntos) :-  % puntaje para una accion de un mago
+    hizo(Mago, Accion),
+    puntajeQueGenera(Accion, Puntos).
