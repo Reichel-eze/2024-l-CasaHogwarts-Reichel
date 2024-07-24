@@ -186,14 +186,24 @@ hizo(hermione, buenaAccion(50, salvarASusAmigos)).
 
 hizo(harry, buenaAccion(60, ganarleAVoldemort)).
 
+hizo(cedric, buenaAccion(100, ganarAlQuidditch)).  % agrego accion que hizo cedric
+
+% ------------ PUNTO 4 -----------------------------------------------------------------
+hizo(hermione, responderPregunta("Donde se encuentra un Bezoar?", 20, snape)).
+hizo(hermione, responderPregunta("Como hacer levitar una pluma?", 25, flitwick)).
+% --------------------------------------------------------------------------------------
+
 %esDe(Alumno, CasaQueQuedoSeleccionado)
 esDe(hermione, gryffindor).
 esDe(ron, gryffindor).
 esDe(harry, gryffindor).
 esDe(draco, slytherin).
 esDe(luna, ravenclaw).
+esDe(cedric, hufflepuff). % agrego a cedric para ejemplos
 
 esAlumno(Alumno) :- esDe(Alumno,_). % que sea de una casa, quiere decir que es alumno
+
+esCasa(Casa) :- esDe(_,Casa). % que sea una casa de donde puede ser alguine, entonces es una casa
 
 % 1)
 % a) Saber si un mago es buen alumno, que se cumple si hizo 
@@ -219,6 +229,14 @@ puntajeQueGenera(irA(Lugar), PuntajeQueResta) :-
 
 puntajeQueGenera(buenaAccion(Puntaje, _), Puntaje). % es un hecho (porque ya le puse el puntaje antes)
 
+% ---------------------------- PUNTO 4 -----------------------------------------
+puntajeQueGenera(responderPregunta(_, Puntaje, snape), PuntajeObtenido) :-
+    PuntajeObtenido is Puntaje // 2.
+
+puntajeQueGenera(responderPregunta(_, Puntaje, Profesor), Puntaje) :-
+    Profesor \= snape.  % ojito
+% ------------------------------------------------------------------------------
+
 %lugarProhibido(Lugar, PuntosQueResta)
 lugarProhibido(bosque, 50).
 lugarProhibido(seccionRestringidaBiblioteca, 10).
@@ -241,15 +259,72 @@ accionRecurrente(Accion) :-
 % 2) Saber cuál es el puntaje total de una casa, 
 % que es la suma de los puntos obtenidos por sus miembros
 
-puntajeTotal(Casa, PuntajeTotal) :-
-    esDe(_,Casa),
+puntajeTotalDeCasa(Casa, PuntajeTotal) :-
+    esCasa(Casa), % la Casa es un lugar que puede ser un Mago
     findall(PuntajeMago, (esDe(Mago,Casa), puntajeMiembro(Mago,PuntajeMago)), ListaDePuntajes),
     sum_list(ListaDePuntajes, PuntajeTotal).
+
+puntajeTotalDeCasaV2(Casa, PuntajeTotal) :-
+    esCasa(Casa),
+    findall(Puntos, (esDe(Mago,Casa), puntajeQueObtuvo(Mago, _, Puntos)), ListaPuntos),
+    sum_list(ListaPuntos, PuntajeTotal).
+
+% VOY HACIENDO ABSTRACCIONES
     
 puntajeMiembro(Mago, PuntajeMiembro) :-    % puntajeTotal de todas las acciones del mago
-    findall(PuntajeAccion, puntajeQueObtuvo(Mago, Accion, PuntajeAccion), ListaDePuntajesMago),
+    %hizo(Mago,_),
+    findall(PuntajeAccion, puntajeQueObtuvo(Mago, _, PuntajeAccion), ListaDePuntajesMago),
     sum_list(ListaDePuntajesMago, PuntajeMiembro).
 
 puntajeQueObtuvo(Mago, Accion, Puntos) :-  % puntaje para una accion de un mago
     hizo(Mago, Accion),
     puntajeQueGenera(Accion, Puntos).
+
+% 3) Saber cuál es la casa ganadora de la copa, 
+% que se verifica para aquella casa que haya obtenido una 
+% cantidad mayor de puntos que todas las otras.
+
+%casaGanadoraDeLaCopa([Casa1, Casa2 | CasasRestantes], CasaGanadora) :-
+%    max_member(Max, List)
+    
+casaGanadora(Casa) :-
+    puntajeTotalDeCasa(Casa, PuntajeMayor),
+    forall((puntajeTotalDeCasa(OtraCasa, PuntajeMenor), Casa \= OtraCasa), 
+    PuntajeMayor > PuntajeMenor). % para todos los puntajes de otras casas que existen, son menores que el puntaje de la casa ganadora
+
+% como OtraCasa es una variable que se usa una vez --> se puede usar un _
+
+casaGanadoraNOT(Casa) :-
+    puntajeTotalDeCasa(Casa, PuntajeMayor),
+    not((puntajeTotalDeCasa(_, PuntajeMenor), PuntajeMenor > PuntajeMayor)).
+% NO existe otra Casa con un PuntajeMenor que sea mayor al PuntajeMayor de la casa ganadora
+
+% 4) Queremos agregar la posibilidad de ganar puntos por responder preguntas en clase. La información que nos interesa de las respuestas en clase son: 
+% - cuál fue la pregunta, 
+% - cuál es la dificultad de la pregunta y 
+% - qué profesor la hizo.
+% Por ejemplo, sabemos que Hermione respondió a la pregunta de dónde 
+% se encuentra un Bezoar, de dificultad 20, realizada por el 
+% profesor Snape, y 
+% cómo hacer levitar una pluma, de dificultad 25, realizada por el 
+% profesor Flitwick.
+
+% Modificar lo que sea necesario para que este agregado funcione 
+% con lo desarrollado hasta ahora, teniendo en cuenta que los puntos 
+% que se otorgan equivalen a la dificultad de la pregunta, 
+% a menos que la haya hecho Snape, que da la mitad de puntos en relación
+% a la dificultad de la pregunta.
+
+              %respondioPregunta(CualfueLaPregunta, Dificultad, QueProfesorLaHizo)
+
+% hizo(Mago, AccionQueHizo) --> mas informacion para los puntos anteriores
+% hizo(hermione, responderPregunta("Donde se encuentra un Bezoar?", 20, snape)).
+% hizo(hermione, responderPregunta("Como hacer levitar una pluma?", 25, flitwick)).
+
+% puntajeQueGenera(Accion, Puntaje)
+% puntajeQueGenera(responderPregunta(_, Puntaje, snape), PuntajeObtenido) :-
+%    PuntajeObtenido is Puntaje // 2.
+
+% puntajeQueGenera(responderPregunta(_, Puntaje, Profesor), Puntaje) :-
+%    Profesor \= snape.
+
